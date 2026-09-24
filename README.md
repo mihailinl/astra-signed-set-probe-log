@@ -45,6 +45,17 @@ host/YYYY-MM-DD.jsonl    one line per hourly push: the probe machine's own uptim
 
 ## A log line (`astra.registry.probe-log/1`)
 
+Each line is one JSON object with exactly these members, in this order, because
+the order is part of the bytes: `schema`, `run_at`, `mode`, `target`, `host`,
+`document`, `url`, `reachable`, `http_status`, `verified`, `verify_error`,
+`serial`, `issued_at`, `expires_at`, `equal_to_signed_head`,
+`equal_null_cause`, `signed_head`, `signed_committed_at`,
+`first_read_lag_seconds`, `pages_list_state`, `probe_commit`.
+`equal_null_cause` is the one optional member: present exactly when
+`equal_to_signed_head` is `null`, and absent otherwise. The members, their order
+and their meaning are published in the Astra registry's contract (B.4, since
+2.11.0), and the prober refuses to write a line with any other.
+
 | member | meaning |
 |---|---|
 | `schema` | `astra.registry.probe-log/1` |
@@ -53,20 +64,22 @@ host/YYYY-MM-DD.jsonl    one line per hourly push: the probe machine's own uptim
 | `target`, `host` | the table above |
 | `document` | `index.json`, `revocations.json`, `trust.json` or `root.json` |
 | `url` | the URL read |
-| `reachable` | a `200` with a body a client could use |
+| `reachable` | the host answered: a status line arrived and it was not a 5xx. Nothing answering (DNS, TCP, TLS, a timeout before any header) or any 5xx is `false`. A complete 3xx or 4xx is `true`, with `verify_error: "not_served"`: the prober follows no redirect, so the host answered that it will not serve the document there |
 | `http_status` | the status, or `null` when no answer came |
 | `verified` | the signature verifies against the prober's own root keys, through a verified `trust.json` (for `root.json`: its keys are those roots). Freshness is not part of it |
 | `verify_error` | why not, or `null` |
 | `serial`, `issued_at`, `expires_at` | what the document says about itself |
-| `equal_to_signed_head` | the bytes, after decoding, equal the `signed` head's |
+| `equal_to_signed_head` | the bytes, after decoding, equal the `signed` head's; `null` when there is no answer to compare |
+| `equal_null_cause` | only when `equal_to_signed_head` is `null`, and says why: `unreachable` (the prober could not read the document, `reachable: false`), `head_unavailable` (it could not read the `signed` head to compare with) or `served_unparseable` (the host answered, and the body did not decode, did not arrive whole, or on a `200` did not parse as JSON) |
 | `signed_head`, `signed_committed_at` | the head it was compared with, and when that head was committed |
 | `first_read_lag_seconds` | on the first read that equals a new head, for a document that head changed: seconds from the commit to that read. Otherwise `null` |
 | `pages_list_state` | `pre_arming` or `armed`: whether Pages' withdrawal list is meant to be the signed one yet |
 | `probe_commit` | the commit of the prober's code |
 
 **An unreachable read** (`reachable: false`) has `verified`, `verify_error`,
-`serial`, `issued_at` and `expires_at` all `null` — never `false` and never
-carried over from an earlier run — so "the prober could not read it" is never
+`serial`, `issued_at`, `expires_at` and `equal_to_signed_head` all `null` —
+never `false` and never carried over from an earlier run — and
+`equal_null_cause: "unreachable"`, so "the prober could not read it" is never
 mistaken for "it failed verification".
 
 **Before arming**, Pages serves an unsigned withdrawal list on purpose; its
@@ -74,6 +87,10 @@ lines say `verified: false`, `verify_error: "no_signatures"` and
 `pages_list_state: "pre_arming"`, and that is the expected state, not a fault.
 
 ## An uptime line (`astra.registry.probe-host/1`)
+
+Exactly these members, in this order: `schema`, `pushed_at`, `day`, `boot_at`,
+`minutes_elapsed`, `ticks`, `base_slots_elapsed`, `base_slots_with_line`,
+`newest_line_run_at`, `probe_commit`.
 
 `pushed_at`, `day`, `boot_at` (when the probe machine last started),
 `minutes_elapsed` and `ticks` (minutes of that day the prober actually ran),
