@@ -24,6 +24,7 @@ having to trust the party that served it.
 | `signed` | `raw.githubusercontent.com` | the head of the registry's `signed` branch, read at the exact commit `git ls-remote` returned |
 | `pages` | `mihailinl.github.io` | `https://mihailinl.github.io/astra-registry/registry/v1/`, the address released Astra builds read — until it is retired |
 | `host` | `registry.minice.ai` | `https://registry.minice.ai/registry/v1/`, the catalogue host, through its CDN — from the day that name is live |
+| `host_ru` | `registry.knice.tech` | `https://registry.knice.tech/registry/v1/`, the catalogue host Astra's RU edition reads (contract DEC-18), read direct by name with no CDN in front — from 2026-10-18 |
 
 `host` is always the hostname a client would write, never the machine that ran
 the probe.
